@@ -170,7 +170,8 @@ class AutoloadRule
     
     const REGEX_DELIMITER = '%';
     
-    const CLASS_TOKEN_REGEX = '%(\[\\?\??\])%';
+    // Square brackets possibly with a backslash and possibly with a question mark.
+    const CLASS_TOKEN_REGEX = '%(\[[\\\\]?[?]?\])%';
     
     //                           1         2         3
     const PATH_TOKEN_REGEX = '%\[([^\d\]]*)([1-9]\d*)([^\d\]]*)\]%';
@@ -196,7 +197,7 @@ class AutoloadRule
     // var : new for each run //
     protected $matches;
     
-    // public //
+    // public : AutoloadRuleInterface //
     
     public function __construct ($classTemplate, $pathTemplate)
     {
@@ -217,6 +218,7 @@ class AutoloadRule
         {
             $this->prepareExpression();
         }
+        
         if (preg_match ($this->expression, $className, $matches))
         {
             $this->matches = $matches;
@@ -276,6 +278,13 @@ class AutoloadRule
         return $path;
     }
     
+    // public : debug //
+    
+    public function __toString ()
+    {
+        return __CLASS__ . ' ("' . $this->classTemplate . '", "' . $this->pathTemplate . '")';
+    }
+    
     // protected //
     
     protected function prepareExpression ()
@@ -305,8 +314,4 @@ class AutoloadRuleException extends \Exception
 {
     const INFINITE_LOOP = __LINE__;
 }
-
-// init //
-
-Autoload::init();
 
