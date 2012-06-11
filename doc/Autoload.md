@@ -53,10 +53,10 @@ improvement of autoloading as opposed to immediate files including
 still persists, which makes this kind of `__autoload` functions a
 good choice for actual fast-response web sites.
 
-But there is a feline hint in the above code. You may be familiar to
-the Factory pattern of producing classes and objects with a variable
-name. And maybe you would like to make use of polymorphism in an
-abstract class somewhat like this:
+However there is a feline hint in the above code. You may be familiar
+to the Factory pattern of producing classes and objects with a
+variable name. And maybe you would like to make use of polymorphism
+in an abstract class somewhat like this:
 
     // Figure 3. A polymorphic method calling a factory.
     abstract class Module
@@ -389,8 +389,7 @@ call `init` from your caller script.
 > autoloaders that can possibly exist in your application.
 
 > It is no harm to call `init` more than once. It remembers whether
-> it was called previously, and returns immediately when called
-> next time.
+> it was called previously, and returns immediately from later calls.
 
 The `load` method is the one that PHP calls when your script requests
 a class not yet loaded. As the method is public, you may want to call

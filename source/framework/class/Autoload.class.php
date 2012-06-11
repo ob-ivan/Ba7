@@ -7,28 +7,28 @@ namespace Ba7\Framework;
 interface AutoloadInterface
 {
     static public function init ();
-    
+
     static public function load ($className);
-    
+
     static public function register ($classTemplate, $pathTemplate);
 }
 
 class Autoload implements AutoloadInterface
 {
     // const //
-    
+
     const CLASS_TEMPLATE        = __LINE__;
     const PATH_TEMPLATE         = __LINE__;
     const CLASS_TEMPLATE_LENGTH = __LINE__;
-    
+
     // var //
-    
+
     static protected $initDone = false;
-    
+
     static protected $rules = array();
-    
+
     // public //
-    
+
     // Append Autoload::load to spl autoload stack.
     static public function init ()
     {
@@ -36,27 +36,27 @@ class Autoload implements AutoloadInterface
         {
             return;
         }
-        
+
         $local = __CLASS__ . '::load';
         if (! self::isSplRegistered($local))
         {
             spl_autoload_register ($local);
         }
-        
+
         // Preserve original __autoload function.
         $original = '__autoload';
         if (function_exists ($original) && ! self::isSplRegistered ($original))
         {
             spl_autoload_register ($original);
         }
-        
+
         self::$initDone = true;
     }
-    
+
     static public function load ($className)
     {
         $path = false;
-        
+
         foreach (self::$rules as $rule)
         {
             if ($rule->match ($className))
@@ -65,13 +65,13 @@ class Autoload implements AutoloadInterface
                 break;
             }
         }
-        
+
         if (! $path)
         {
             // $className is not registered. Let other autoloaders do their work.
             return;
         }
-        
+
         if (! file_exists ($path))
         {
             throw new AutoloadException (
@@ -80,9 +80,9 @@ class Autoload implements AutoloadInterface
                 AutoloadException::FILE_DOES_NOT_EXIST
             );
         }
-        
+
         require_once $path;
-        
+
         if (! class_exists ($className) && ! interface_exists ($className))
         {
             throw new AutoloadException (
@@ -92,15 +92,15 @@ class Autoload implements AutoloadInterface
             );
         }
     }
-    
+
     static public function register ($classTemplate, $pathTemplate)
     {
         self::$rules[] = new AutoloadRule ($classTemplate, $pathTemplate);
         usort (self::$rules, __CLASS__ . '::sortLengthDesc');
     }
-    
+
     // protected //
-    
+
     static protected function isSplRegistered ($functionName)
     {
         $stack = spl_autoload_functions();
@@ -118,7 +118,7 @@ class Autoload implements AutoloadInterface
         }
         return false;
     }
-    
+
     static protected function sortLengthDesc (AutoloadRule $rule1, AutoloadRule $rule2)
     {
         $length1 = $rule1->getLength();
@@ -146,11 +146,11 @@ class AutoloadException extends \Exception
 interface AutoloadRuleInterface
 {
     public function __construct ($classTemplate, $pathTemplate);
-    
+
     public function getLength ();
-    
+
     public function match ($className);
-    
+
     public function getPath ();
 }
 
@@ -167,75 +167,75 @@ interface AutoloadRuleInterface
 class AutoloadRule
 {
     // const //
-    
+
     const REGEX_DELIMITER = '%';
-    
+
     // Square brackets possibly with a backslash and possibly with a question mark.
     const CLASS_TOKEN_REGEX = '%(\[[\\\\]?[?]?\])%';
-    
+
     //                           1         2         3
     const PATH_TOKEN_REGEX = '%\[([^\d\]]*)([1-9]\d*)([^\d\]]*)\]%';
-    
+
     static protected $TOKEN_REPLACE = array (
         '[\]'  => '[\w\\\\]+',
         '[\?]' => '[\w\\\\]*',
         '[]'   => '[\w]+',
         '[?]'  => '[\w]*',
     );
-    
+
     // var //
-    
+
     // var : essentials //
     protected $classTemplate;
     protected $pathTemplate;
-    
+
     // var : quick cache //
     protected $length;
     protected $expression;
     protected $tokenCount;
-    
+
     // var : new for each run //
     protected $matches;
-    
+
     // public : AutoloadRuleInterface //
-    
+
     public function __construct ($classTemplate, $pathTemplate)
     {
         $this->classTemplate = $classTemplate;
         $this->pathTemplate  = $pathTemplate;
-        
+
         $this->length = strlen ($classTemplate);
     }
-    
+
     public function getLength ()
     {
         return $this->length;
     }
-    
+
     public function match ($className)
     {
         if (! $this->expression)
         {
             $this->prepareExpression();
         }
-        
+
         if (preg_match ($this->expression, $className, $matches))
         {
             $this->matches = $matches;
             return true;
         }
-        
+
         $this->matches = false;
         return false;
     }
-    
+
     public function getPath ()
     {
         if (! $this->matches)
         {
             return false;
         }
-        
+
         $iteration = 0;
         $offset = 0;
         $path = $this->pathTemplate;
@@ -250,7 +250,7 @@ class AutoloadRule
                     AutoloadRuleException::INFINITE_LOOP
                 );
             }
-            
+
             /**
              * 1 = left context
              * 2 = number
@@ -274,19 +274,19 @@ class AutoloadRule
             $path = $before . $replace . $after;
             $offset = $matches[0][1] + strlen ($replace);
         }
-        
+
         return $path;
     }
-    
+
     // public : debug //
-    
+
     public function __toString ()
     {
         return __CLASS__ . ' ("' . $this->classTemplate . '", "' . $this->pathTemplate . '")';
     }
-    
+
     // protected //
-    
+
     protected function prepareExpression ()
     {
         $tokenCount = 0;
@@ -304,7 +304,7 @@ class AutoloadRule
             }
         }
         $expression .= '$' . self::REGEX_DELIMITER . 'i';
-        
+
         $this->tokenCount = $tokenCount;
         $this->expression = $expression;
     }
