@@ -336,13 +336,14 @@ the expected manner:
     // Figure 12. Requested classes and their resulting paths.
     
     // Rule: '[\]\[]Interface' => DOCUMENT_ROOT . '/libs/[1]/interface/[2].interface.php'
-    Oxt\ParseInterface       => libs/Oxt/interface/Parse.interface.php
-    Acase\FormatterInterface => libs/Acase/interface/Formatter.interface.php
+    Oxt\ParseInterface          => libs/Oxt/interface/Parse.interface.php
+    Acase\FormatterInterface    => libs/Acase/interface/Formatter.interface.php
+    TemplaterInterface          => No match! Namespace wild-card is mandatory in this template.
     
-    // Rule: '[\?]\[?]Exception' => DOCUMENT_ROOT . '/[libs/1]/exception/[2.]interface.php'
+    // Rule: '[\?]\[?]Exception' => DOCUMENT_ROOT . '/[libs/1]/exception/[2.]exception.php'
     Oxt\ParseException  => libs/Oxt/exception/Parse.exception.php
     Oxt\Exception       => libs/Oxt/exception/exception.php         // token 2 is omitted.
-    KernelException     => exeption/Kernel.exception.php            // token 1 is omitted.
+    KernelException     => exception/Kernel.exception.php           // token 1 is omitted.
     // Here we can't get both tokens omitted as it would mean we called class Exception which is built-in.
     
 To sum up and put some formality into it, here is description of
@@ -387,6 +388,10 @@ call `init` from your caller script.
 > Instead it calls `spl_autoload_register` as it is aware of other
 > autoloaders that can possibly exist in your application.
 
+> It is no harm to call `init` more than once. It remembers whether
+> it was called previously, and returns immediately when called
+> next time.
+
 The `load` method is the one that PHP calls when your script requests
 a class not yet loaded. As the method is public, you may want to call
 it manually, but in fact you don't need to.
@@ -396,7 +401,7 @@ method. Its arguments are classname and path templates described in
 the previous section. You can start with registering simple rules
 like:
 
-    // Figure 15. Rearrangment of __autoload function from Figure 2.
+    // Figure 15. Rearrangment of __autoload function from Figure 5.
     use Ba7\Framework\Autoload;
     
     Autoload::register ('Utils',    LIBS_ROOT . '/Utils.class.php');
@@ -413,8 +418,6 @@ like:
     // rules come first. Once a rule is matched, others (shorter ones)
     // are ignored. That's why class Model would match '[?]Model' template
     // rather than the simple 'Model' template.
-    // A shorter but not yet implemented form of writing the same is:
-    // Autoload::register ('[Cat|Kitten]Model', MODEL_ROOT . '/[1].model.php');
 
 The monstruous `getFilePath` function from Fig.6 gets replaced with
 a number of lines:
