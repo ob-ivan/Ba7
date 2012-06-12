@@ -340,16 +340,23 @@ class Config implements ConfigInterface
             {
                 if ($line == '\\')
                 {
-                    if (! isset ($lines[$lineNum]))
+                    while (true)
                     {
-                        throw new ConfigException (
-                            'Unexpected end of file while reading ' .
-                            implode ('/', $groupNameStack) . '/' . ($isVariable ? '$' : '') . $name,
-                            ConfigException::UNEXPECTED_END_OF_FILE
-                        );
+                        if (! isset ($lines[$lineNum]))
+                        {
+                            throw new ConfigException (
+                                'Unexpected end of file while reading ' .
+                                implode ('/', $groupNameStack) . '/' . ($isVariable ? '$' : '') . $name,
+                                ConfigException::UNEXPECTED_END_OF_FILE
+                            );
+                        }
+                        $line = trim ($lines[$lineNum]);
+                        ++$lineNum;
+                        if ($line[0] != '#')
+                        {
+                            break;
+                        }
                     }
-                    $line = trim ($lines[$lineNum]);
-                    ++$lineNum;
                     continue;
                 }
 

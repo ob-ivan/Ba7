@@ -21,5 +21,4 @@ Config
 ------
 
 This utility allows you to create and access immutable config files
-in a simple nginx.conf-like form. Documentation and more complex
-features are soon to follow.
+in a simple nginx.conf-like form. See doc/Config.md for details.
