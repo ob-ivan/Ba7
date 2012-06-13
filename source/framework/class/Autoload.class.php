@@ -154,36 +154,37 @@ interface AutoloadRuleInterface
     public function getPath ();
 }
 
-/**
- * Recognized tokens in class template:
- *  [\]  = ([\w\\]+)
- *  [\?] = ([\w\\]*)
- *  []   = ([\w]+)
- *  [?]  = ([\w]*)
- *
- * Tokens in path template:
- *  [left context 1 right context]
-**/
 class AutoloadRule
 {
     // const //
 
     const REGEX_DELIMITER = '%';
 
-    // Square brackets possibly with a backslash and possibly with a question mark.
-    const CLASS_TOKEN_REGEX = '%(\[[\\\\]?[?]?\])%';
+    const CLASS_PATTERN_REGEX = '%
+        \\[
+            (                               # 1 alternatives:
+                (?: \\w*|\\\\ )             #   a word, a backslash, or an empty string.
+                (?:
+                    \\| (?: \\w*|\\\\ )     #   the same, prefixed with a pipe
+                )*                          #   in arbitrary count.
+            )
+            (\\??)                          # 2 possibly a question mark.
+        \\]
+    %x';
 
-    //                           1         2         3
-    const PATH_TOKEN_REGEX = '%\[([^\d\]]*)([1-9]\d*)([^\d\]]*)\]%';
-
-    static protected $TOKEN_REPLACE = array (
-        '[\]'  => '[\w\\\\]+',
-        '[\?]' => '[\w\\\\]*',
-        '[]'   => '[\w]+',
-        '[?]'  => '[\w]*',
-    );
-
-    // var //
+    const PATH_PLACEHOLDER_REGEX = '%
+        \\[
+            ([^\d\]]*)              # 1 left context.
+            ([1-9]\d*)              # 2 pattern number.
+            ([^\d\]]*)              # 3 right context.
+            (                       # 4 filters:
+                \\| \\w+            #   a pipe and filter name.
+                (?:
+                    : [^|\\]:]+     #   arguments are separated by colons.
+                )*
+            )*
+        \\]
+    %x';
 
     // var : essentials //
     protected $classTemplate;
@@ -192,7 +193,7 @@ class AutoloadRule
     // var : quick cache //
     protected $length;
     protected $expression;
-    protected $tokenCount;
+    protected $patternCount;
 
     // var : new for each run //
     protected $matches;
@@ -239,7 +240,7 @@ class AutoloadRule
         $iteration = 0;
         $offset = 0;
         $path = $this->pathTemplate;
-        while (preg_match (self::PATH_TOKEN_REGEX, $path, $matches, PREG_OFFSET_CAPTURE, $offset))
+        while (preg_match (self::PATH_PLACEHOLDER_REGEX, $path, $matches, PREG_OFFSET_CAPTURE, $offset))
         {
             ++$iteration;
             if ($iteration > 100)
@@ -289,24 +290,104 @@ class AutoloadRule
 
     protected function prepareExpression ()
     {
-        $tokenCount = 0;
+        $patternCount = 0;
         $expression = self::REGEX_DELIMITER . '^';
-        foreach (preg_split (self::CLASS_TOKEN_REGEX, $this->classTemplate, null, PREG_SPLIT_DELIM_CAPTURE) as $token)
+        foreach (self::split (self::CLASS_PATTERN_REGEX, $this->classTemplate, PREG_SPLIT_NO_EMPTY) as $token)
         {
-            if (isset (self::$TOKEN_REPLACE[$token]))
+            if (is_array ($token))
             {
-                $expression .= '(' . self::$TOKEN_REPLACE[$token] . ')';
-                ++$tokenCount;
+                $alts = array();
+                foreach (explode ('|', $token[1]) as $alt)
+                {
+                    if (empty ($alt))
+                    {
+                        $alts[] = '\\w+';
+                    }
+                    elseif ($alt == '\\')
+                    {
+                        $alts[] = '[\\w\\\\]+';
+                    }
+                    else
+                    {
+                        $alts[] = $alt;
+                    }
+                }
+                $subex = implode ('|', $alts);
+                if ($token[2])
+                {
+                    $subex .= '|';
+                }
+                $expression .= '(' . $subex . ')';
+                ++$patternCount;
             }
-            else
+            elseif (is_string ($token))
             {
                 $expression .= preg_quote ($token, self::REGEX_DELIMITER);
             }
         }
         $expression .= '$' . self::REGEX_DELIMITER . 'i';
 
-        $this->tokenCount = $tokenCount;
+        $this->patternCount = $patternCount;
         $this->expression = $expression;
+    }
+
+    /**
+     * Performs preg_split with delimiter capture in the manner that
+     * unmatched parts of $string become strings in the output array
+     * and matched parts become arrays of subpatterns in $regex.
+     *
+     *  @param  {integer}   flags   PREG_OFFSET_CAPTURE? | PREG_SPLIT_NO_EMPTY?
+     *  @return array (
+     *      0 => array ( // matched
+     *          0 => $0, // whole matched pattern
+     *          1 => $1, // subpattern 1
+     *          ...
+     *      ),
+     *      1 => '...', // unmatched
+     *      ...
+     *  )
+    **/
+    static protected function split ($regex, $string, $flags = 0)
+    {
+        $return = array ();
+        $offset = 0;
+        $length = strlen ($string);
+        while ($offset < $length)
+        {
+            if (! preg_match ($regex, $string, $matches, PREG_OFFSET_CAPTURE, $offset))
+            {
+                // capture the last string part.
+                $return[] = substr ($string, $offset);
+                break;
+            }
+
+            $diff = $matches[0][1] - $offset;
+            if (0 < $diff || ! ($diff || ($flags & PREG_SPLIT_NO_EMPTY)))
+            {
+                // capture string part.
+                $return[] = substr ($string, $offset, $diff);
+            }
+
+            // capture matched part.
+            if ($flags & PREG_OFFSET_CAPTURE)
+            {
+                $return[] = $matches;
+            }
+            else
+            {
+                $noOffset = array();
+                foreach ($matches as $index => $match)
+                {
+                    $noOffset[$index] = $match[0];
+                }
+                $return[] = $noOffset;
+            }
+
+            // move the frame.
+            $offset = $matches[0][1] + strlen ($matches[0][0]);
+        }
+
+        return $return;
     }
 }
 

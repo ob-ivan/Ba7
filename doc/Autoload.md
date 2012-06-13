@@ -116,7 +116,7 @@ contaminated and is not likely to ever be cured from it.
 And that's where `__autoload` comes back again, and you rewrite
 `ModelFactory` in the way to utilize it:
     
-    // Figure 4. Implementing factory with autoloading.
+    // Figure 5. Implementing factory with autoloading.
     class ModelFactory
     {
         // Okay, this time I am not that lazy.
@@ -144,7 +144,7 @@ And instead of listing each Cat, Kitten, Tomcat, Pussy etc models in
 the $map variable (of Fig.2), you allow `__autoload` to take care of
 them automatically:
     
-    // Figure 5. Introducing template matching into __autoload function.
+    // Figure 6. Introducing template matching into __autoload function.
     function __autoload ($className)
     {
         $libsRoot  = DOCUMENT_ROOT . '/libs/';
@@ -173,7 +173,7 @@ similarly-named classes. It is not that hard if you take a look on
 the following piece of code, pasted from an actual project I am
 working on.
 
-    // Figure 6. The ugliest __autoload helper function ever.
+    // Figure 7. The ugliest __autoload helper function ever.
     static public function getFilePath ($className)
     {
         // Namespace\Classname
@@ -256,7 +256,7 @@ Autoload utility.
 Template syntax
 ---------------
 
-As seen in Fig.6 in the previous section, templating use cases are
+As seen in Fig.7 in the previous section, templating use cases are
 pretty simple in their structure. There usually is a keyword which
 fixes the context of a class, and a wild-card for its task-specific
 name. You may need both wild-cards that represent namespaces (may
@@ -264,27 +264,27 @@ contain a backslash `\`), and that represent non-breaking names
 (and thus do not contain a backslash). These are shown in the
 following way:
 
-    // Figure 7. Mandatory classname tokens.
+    // Figure 8. Mandatory classname patterns.
     $libsInterfaceClassnameTemplate = '[\]\[]Interface';
-    // [\] - the wild-card for "namespace token".
-    // []  - the wild-card for "word token".
+    // [\] - the wild-card for "namespace pattern".
+    // []  - the wild-card for "word pattern".
     
-You may also want some tokens to be possibly empty. Then you put
+You may also want some patterns to be possibly empty. Then you put
 a self-explanatory question mark `?` inside the brackets to show your
 intention:
 
-    // Figure 8. Optional classname tokens.
-    $libxExceptionClassnameTemplate = '[\?]\[?]Exception';
-    // [\?] - the wild-card for "optional namespace token".
-    // [?]  - the wild-card for "optional word token".
+    // Figure 9. Optional classname patterns.
+    $libsExceptionClassnameTemplate = '[\?]\[?]Exception';
+    // [\?] - the wild-card for "optional namespace pattern".
+    // [?]  - the wild-card for "optional word pattern".
 
-The purpose of optional tokens is to be able to include abstract or
+The purpose of optional patterns is to be able to include abstract or
 generic classes in the same directory where more specific classes of
 the same sort reside in. Consider following folder structure:
 
-    // Figure 9. Example folder structure.
+    // Figure 10. Example folder structure.
     lib/
-        Oxt/                        // Namespace token takes us into this folder.
+        Oxt/                        // Namespace pattern takes us into this folder.
             class/
                 Parse.class.php     // Files that do the main work throw exceptions at times
                 ...                 // and require interfaces to ensure that they interact properly.
@@ -302,13 +302,22 @@ the same sort reside in. Consider following folder structure:
 Here it is only natural to make it possible to leave out the
 specifier part of class name for Exception family.
 
-Now that we have written class name templates (see Figs. 7, 8) and
+Sometimes you don't feel secure enough with a wildcard that is
+allowed to match just anything. Then you can list all available
+options explicitly:
+
+    // Figure 11. Classname patterns with alternatives.
+    $modelClassnameTemplate = '[][Model|Record]'
+    // Both Model and Record are legal suffices for classes that
+    // reside in model folder.
+
+Now that we have written class name templates (see Figs. 8, 9, 11) and
 expect them to match when an appropriate class is called, how do we
 specify resulting path to be included by the autoloader? It is done
 in almost the same way you write substitute strings when running
 preg_replace() et al.
 
-    // Figure 10. Path templates.
+    // Figure 12. Path templates.
     $libsInterfacePathTemplate = DOCUMENT_ROOT . '/libs/[1]/interface/[2].interface.php';
     $libsExceptionPathTemplate = DOCUMENT_ROOT . '/[libs/1]/exception/[2.]interface.php';
     
@@ -326,14 +335,14 @@ to avoid displaying unnecessary spaces and delimiters if it really is.
 Thus, after we register autoloading rules with the values described
 above:
 
-    // Figure 11. Actual registering of autoload rules.
+    // Figure 13. Actual registering of autoload rules.
     Ba7\Framework\Autoload::register ($libsInterfaceClassnameTemplate, $libsInterfacePathTemplate);
     Ba7\Framework\Autoload::register ($libxExceptionClassnameTemplate, $libsExceptionPathTemplate);
 
 calls to not yet loaded exceptions and interfaces are performed in
 the expected manner:
 
-    // Figure 12. Requested classes and their resulting paths.
+    // Figure 14. Requested classes and their resulting paths.
     
     // Rule: '[\]\[]Interface' => DOCUMENT_ROOT . '/libs/[1]/interface/[2].interface.php'
     Oxt\ParseInterface          => libs/Oxt/interface/Parse.interface.php
@@ -349,12 +358,14 @@ the expected manner:
 To sum up and put some formality into it, here is description of
 template syntax in a relaxed BNF-like form:
 
-    // Figure 13. Template syntax.
-    ClassnameTemplate ::= ClassnameToken+;
-    ClassnameToken    ::= String | ClassnameWildcard;
-    ClassnameWildcard ::= '[' '\'? '?'? ']';
+    // Figure 15. Template syntax.
+    ClassnameTemplate       ::= ClassnameToken+;
+    ClassnameToken          ::= String | ClassnamePattern;
+    ClassnamePattern        ::= ClassnameWildcard | ClassnameSelect;
+    ClassnameWildcard       ::= '[' '\'? '?'? ']';
     // Place '\' to allow matching backslash.
     // Place '?' to allow matching empty line.
+    ClassnameSelect         ::= '[' String ( '|' String )+ ']'
     
     PathTemplate    ::= PathToken+;
     PathToken       ::= String | PathPlaceholder;
@@ -366,7 +377,7 @@ Interface and usage examples
 
 The interface exposes three public methods:
 
-    // Figure 14. The interface.
+    // Figure 16. The interface.
     interface Ba7\Framework\AutoloadInterface
     {
         static public function init ();
@@ -380,7 +391,7 @@ performed automatically when you enable Ba7\Framework via boostrap
 script. If you run Autoload as a separate utility, you will have to
 call `init` from your caller script.
 
-    // Figure 15. Running Autoload as a stand-alone utility.
+    // Figure 17. Running Autoload as a stand-alone utility.
     include BA7_DIRECTORY . '/framework/class/Autoload.class.php';
     Ba7\Framework\Autoload::init();
 
@@ -400,15 +411,11 @@ method. Its arguments are classname and path templates described in
 the previous section. You can start with registering simple rules
 like:
 
-    // Figure 15. Rearrangment of __autoload function from Figure 5.
+    // Figure 18. Rearrangment of __autoload function from Figure 6.
     use Ba7\Framework\Autoload;
+    Autoload::init();
     
-    Autoload::register ('Utils',    LIBS_ROOT . '/Utils.class.php');
-    Autoload::register ('Database', LIBS_ROOT . '/Database.class.php');
-    Autoload::register ('Model',    LIBS_ROOT . '/Model.class.php');
-    // I consider putting on todo list an alternative classname token
-    // that would allow you to write the above in this way:
-    // Autoload::register ('[Utils|Database|Model]', LIBS_ROOT . '/[1].class.php');
+    Autoload::register ('[Utils|Database|Model]', LIBS_ROOT . '/[1].class.php');
     
     Autoload::register ('[]Model', MODEL_ROOT . '/[1].model.php');
     // [] here is not optional as it would override the rule for 'Model'.
@@ -418,31 +425,32 @@ like:
     // are ignored. That's why class Model would match '[?]Model' template
     // rather than the simple 'Model' template.
 
-The monstruous `getFilePath` function from Fig.6 gets replaced with
+The monstruous `getFilePath` function from Fig.7 gets replaced with
 a number of lines:
 
-    // Figure 16. A concise way to write Figure 6.
+    // Figure 19. A concise way to write Figure 7.
     use Ba7\Framework\Autoload;
+    Autoload::init();
     
     // libs
-    Autoload::register('[\]\[]Interface',     LIB_DIRECTORY . '/[1]/interface/[2].interface.php');
-    Autoload::register('[\]\[?]Exception',    LIB_DIRECTORY . '/[1]/exception/[2.]exception.php');
-    Autoload::register('[\]\[]Type',          LIB_DIRECTORY . '/[1]/type/[2].type.php');
-    Autoload::register('[\]\[]',              LIB_DIRECTORY . '/[1]/class/[2].class.php');
+    Autoload::register('[\]\[]Interface',   LIB_DIRECTORY . '/[1]/interface/[2].interface.php');
+    Autoload::register('[\]\[?]Exception',  LIB_DIRECTORY . '/[1]/exception/[2.]exception.php');
+    Autoload::register('[\]\[]Type',        LIB_DIRECTORY . '/[1]/type/[2].type.php');
+    Autoload::register('[\]\[]',            LIB_DIRECTORY . '/[1]/class/[2].class.php');
     
     // core
-    Autoload::register('[]Interface',     INTERFACE_DIRECTORY     . '/[1].interface.php');
-    Autoload::register('[]Exception',     EXCEPTION_DIRECTORY     . '/[1].exception.php');
-    Autoload::register('[]Application',   APPLICATION_DIRECTORY   . '/[1].application.php');
-    Autoload::register('[]Model',         MODEL_DIRECTORY         . '/[1].model.php');
-    Autoload::register('[]Record',        MODEL_DIRECTORY         . '/[1].record.php');
-    Autoload::register('[]Page',          PAGE_DIRECTORY          . '/[1].page.php');
-    Autoload::register('[]',              KERNEL_DIRECTORY        . '/[1].class.php');
+    Autoload::register('[]Interface',       INTERFACE_DIRECTORY     . '/[1].interface.php');
+    Autoload::register('[]Exception',       EXCEPTION_DIRECTORY     . '/[1].exception.php');
+    Autoload::register('[]Application',     APPLICATION_DIRECTORY   . '/[1].application.php');
+    Autoload::register('[]Model',           MODEL_DIRECTORY         . '/[1].model.php');
+    Autoload::register('[]Record',          MODEL_DIRECTORY         . '/[1].record.php');
+    Autoload::register('[]Page',            PAGE_DIRECTORY          . '/[1].page.php');
+    Autoload::register('[]',                KERNEL_DIRECTORY        . '/[1].class.php');
 
 The three first lines from `// libs` part lead us to an idea of
 adding case-switching filters to path placeholders:
 
-    // Figure 17. Possible syntax for placeholder filters. Pipe `|` reminds us of bash process piping.
+    // Figure 20. Possible syntax for placeholder filters. Pipe `|` reminds us of bash process piping.
     Autoload::register('[\]\[?][Interface|Exception|Type]', LIB_DIRECTORY . '/[1]/[3|lower]/[2.][3|lower].php');
     // or Smarty-style:
     Autoload::register('[\]\[?][Interface|Exception|Type]', LIB_DIRECTORY . '/[1]/[3|case:lower]/[2.][3|case:lower].php');
