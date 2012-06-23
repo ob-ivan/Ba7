@@ -318,26 +318,36 @@ in almost the same way you write substitute strings when running
 preg_replace() et al.
 
     // Figure 12. Path templates.
-    $libsInterfacePathTemplate = DOCUMENT_ROOT . '/libs/[1]/interface/[2].interface.php';
-    $libsExceptionPathTemplate = DOCUMENT_ROOT . '/[libs/1]/exception/[2.]interface.php';
-    
+    $libsInterfacePathTemplate  = DOCUMENT_ROOT . '/libs/[1]/interface/[2].interface.php';
+    $libsExceptionPathTemplate  = DOCUMENT_ROOT . '/[libs/1]/exception/[2.]interface.php';
+    $modelPathTemplate          = DOCUMENT_ROOT . '/model/[1].[2|case:lower].php';
+
 The digits 1 and 2 here stand for token order numbers in the
-corresponding classname template. The difference between those two
-path templates is in that exception path template's tokens are
-optional, and you may want them to leave out some parts of resulting
-path when the corresponding class name token is matched to empty
-string. This leave-out parts are enclosed with brackets that surround
-placeholder digits and constitute a path template token. This syntax
-and behaviour should resemble that of foobar2000 path formatting
-rules, where you place brackets around anything that could be null
-to avoid displaying unnecessary spaces and delimiters if it really is.
+corresponding classname template. The difference between the first
+and the second of those path templates is in that exception path
+template's tokens are optional, and you may want them to leave out
+some parts of resulting path when the corresponding class name token
+is matched to empty string. This leave-out parts are enclosed with
+brackets that surround placeholder digits and constitute a path
+template token. This syntax and behaviour should resemble that of
+foobar2000 path formatting rules, where you place brackets around
+anything that could be null to avoid displaying unnecessary spaces
+and delimiters if it really is.
+
+The path template for models and records shows an application of
+a so-called filter in a form of a pipe `|`, followed by filter name
+and its arguments delimited by colons `:`. In this case the filter
+converts the second matched token to lowercase characters. There are
+other filters defined by default, and you can define your own, too.
+See `doc/Filter.md` for more details on this topic.
 
 Thus, after we register autoloading rules with the values described
 above:
 
     // Figure 13. Actual registering of autoload rules.
-    Ba7\Framework\Autoload::register ($libsInterfaceClassnameTemplate, $libsInterfacePathTemplate);
-    Ba7\Framework\Autoload::register ($libxExceptionClassnameTemplate, $libsExceptionPathTemplate);
+    Ba7\Framework\Autoload::register ($libsInterfaceClassnameTemplate,  $libsInterfacePathTemplate);
+    Ba7\Framework\Autoload::register ($libxExceptionClassnameTemplate,  $libsExceptionPathTemplate);
+    Ba7\Framework\Autoload::register ($modelClassnameTemplate,          $modelPathTemplate);
 
 calls to not yet loaded exceptions and interfaces are performed in
 the expected manner:
@@ -355,6 +365,11 @@ the expected manner:
     KernelException     => exception/Kernel.exception.php           // token 1 is omitted.
     // Here we can't get both tokens omitted as it would mean we called class Exception which is built-in.
     
+    // Rule: '[][Model|Record]' => DOCUMENT_ROOT . '/model/[1].[2|case:lower].php'
+    UserModel           => model/User.model.php
+    TaskRecord          => model/Task.record.php
+    Acase\HotelModel    => No match! Classname wildcard [] doesn't allow namespaces.
+    
 To sum up and put some formality into it, here is description of
 template syntax in a relaxed BNF-like form:
 
@@ -369,8 +384,10 @@ template syntax in a relaxed BNF-like form:
     
     PathTemplate    ::= PathToken+;
     PathToken       ::= String | PathPlaceholder;
-    PathPlaceholder ::= '[' PlaceholderContext Digit PlaceholderContext ']';
-    PlaceholderContext ::= (any string, possibly empty, not containing digits and brackets)
+    PathPlaceholder ::= '[' PlaceholderContext Digit PlaceholderContext FilterChain? ']';
+    FilterChain     ::= Filter FilterChain?
+    Filter          ::= '|' FilterName ( ':' String )*
+    PlaceholderContext ::= (any string, possibly empty, not containing digits, brackets, or pipes)
     
 Interface and usage examples
 ----------------------------
@@ -433,25 +450,14 @@ a number of lines:
     Autoload::init();
     
     // libs
-    Autoload::register('[\]\[]Interface',   LIB_DIRECTORY . '/[1]/interface/[2].interface.php');
-    Autoload::register('[\]\[?]Exception',  LIB_DIRECTORY . '/[1]/exception/[2.]exception.php');
-    Autoload::register('[\]\[]Type',        LIB_DIRECTORY . '/[1]/type/[2].type.php');
-    Autoload::register('[\]\[]',            LIB_DIRECTORY . '/[1]/class/[2].class.php');
+    Autoload::register('[\]\[?][Interface|Exception|Type]', LIB_DIRECTORY . '/[1]/[3|case:lower]/[2.][3|case:lower].php');
+    Autoload::register('[\]\[]',                            LIB_DIRECTORY . '/[1]/class/[2].class.php');
     
     // core
     Autoload::register('[]Interface',       INTERFACE_DIRECTORY     . '/[1].interface.php');
     Autoload::register('[]Exception',       EXCEPTION_DIRECTORY     . '/[1].exception.php');
     Autoload::register('[]Application',     APPLICATION_DIRECTORY   . '/[1].application.php');
-    Autoload::register('[]Model',           MODEL_DIRECTORY         . '/[1].model.php');
-    Autoload::register('[]Record',          MODEL_DIRECTORY         . '/[1].record.php');
+    Autoload::register('[][Model|Record]',  MODEL_DIRECTORY         . '/[1].[2|case:lower].php');
     Autoload::register('[]Page',            PAGE_DIRECTORY          . '/[1].page.php');
     Autoload::register('[]',                KERNEL_DIRECTORY        . '/[1].class.php');
-
-The three first lines from `// libs` part lead us to an idea of
-adding case-switching filters to path placeholders:
-
-    // Figure 20. Possible syntax for placeholder filters. Pipe `|` reminds us of bash process piping.
-    Autoload::register('[\]\[?][Interface|Exception|Type]', LIB_DIRECTORY . '/[1]/[3|lower]/[2.][3|lower].php');
-    // or Smarty-style:
-    Autoload::register('[\]\[?][Interface|Exception|Type]', LIB_DIRECTORY . '/[1]/[3|case:lower]/[2.][3|case:lower].php');
 

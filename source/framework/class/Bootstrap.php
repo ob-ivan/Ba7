@@ -15,5 +15,8 @@ class Bootstrap implements BootstrapInterface
     {
         require_once $frameworkRoot . '/class/Autoload.php';
         require_once $frameworkRoot . '/class/Filter.php';
+        
+        Autoload::init();
+        Autoload::register ('Ba7\\Framework\\[]');
     }
 }

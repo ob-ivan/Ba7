@@ -1,0 +1,105 @@
+
+Уровни поставки:
+I.   Framework      LibManager
+II.  Engine         PluginManager
+III. CMS            ModuleManager
+IV.  Application
+
+    Ba7-framework
+    -------------
+    
+source
+    bootstrap.php
+        - loads Bootstrap class and runs it.
+    framework/
+        framework.config
+        framework.default.config
+        class/
+            Autoload.php
+                - TODO: |1|default:abstract], [2|case:lower]
+            Bootstrap.php
+                - constructs with framework root path.
+                - Loads Error, Autoload, Config classes.
+                - Loads config from framework.config.
+                - Registers autoload rules according to the config.
+            Cache.php
+            Config.php
+            LibManager.php - фабрика либов.
+        Model/
+            ConfigCacheModel.php
+                - модель для CacheModelFactory.
+                - Позволяет регистрировать файлы конфига для кэширования.
+                - При чтении пытается сначала найти конфиг в кэше.
+                - Если в кэше нету или файл новее, то из файла.
+    lib/
+        <lib-name>/
+            <main-file>.php
+                class <\LibNamespace\ExportClass>
+            <any-other-files>
+        ...
+        lib.config
+            <lib-name> = {
+                file  = <main-file>
+                class = <\LibNamespace\ExportClass>
+            }
+            ...
+
+    Ba7-CMS
+    -------
+    
+ba7
+    ba7.config
+    ba7.default.config
+    bootstrap.php
+    kernel/
+        framework/ - namespace \Ba7\Framework
+            class/
+                Autoload.class.php
+                Config.class.php
+                LibManager.class.php - фабрика
+                PluginManager.class.php - фабрика-реестр плагинов.
+            interface/
+                Plugin.interface.php
+            exception/
+        engine/
+            class/
+                ModuleManager.class.php - фабрика-реестр модулей.
+            interface/
+                Module.interface.php
+            exception/
+        cms/
+    extension/
+        lib/
+            <lib-name>/
+                <main-file>.php
+                    class <\LibNamespace\ExportClass>
+                <any-other-files>
+            ...
+            lib.config
+                <lib-name> : {
+                    file  : <main-file>
+                    class : <\LibNamespace\ExportClass>
+                }
+                ...
+        plugin/
+            <plugin-name>/
+                class/
+                    <main-file>.class.php
+                interface/
+                exception/
+                <plugin-name>.plugin.config
+                    file : <main-file>
+        module/
+            <module-name>/
+                action/
+                resource/
+                    image/
+                    script/
+                    style/
+                plugin/
+                    <plugin-name>/
+                        <file> - если модуль вызывает плагин, то этот файл доступен плагину на чтение и инклуд.
+                <module-name>.module.config
+    tmp/
+        cache/
+        upload/
